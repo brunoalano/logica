@@ -37,10 +37,12 @@ def parseNot(tokens):
 
 # Parse an expression
 def parseAnd(tokens):
-  return tokens[0] and tokens[1]
+  tokens = tokens[0]
+  return tokens[0] and tokens[2]
 
 def parseOr(tokens):
-  return tokens[0] or tokens[1]
+  tokens = tokens[0]
+  return tokens[0] or tokens[2]
 
 # Setup variables containing only one character
 _var = Word( alphas, max=1 )
