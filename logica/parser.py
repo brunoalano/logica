@@ -18,110 +18,54 @@ true and false.
 
 # Python Parsing Library
 import pyparsing
-from pyparsing import Word, alphas, Literal, oneOf, opAssoc, infixNotation
+from pyparsing import Word, alphas, Literal, oneOf, opAssoc, infixNotation, Group, Forward, Or, Keyword, ZeroOrMore
 import collections
 
 # Store the variables values
 values = collections.defaultdict(lambda: 0)
 
-class Operand(object):
-  '''
-  Manipulates the Variables
+# Fetch the variable value
+def parseVariable(tokens):
+  return bool(values[tokens[0]])
 
-  This method will run when some variable are requested
-  by the parser, looking for it value on our global values
-  database
+# Parse a binary value (1 or 0)
+def parseBinary(tokens):
+  return bool(int(tokens[0]))
 
-  '''
+def parseNot(tokens):
+  return not tokens[0]
 
-  def __init__(self, t):
-    # Load the label name
-    self.label = t[0]
+# Parse an expression
+def parseAnd(tokens):
+  return tokens[0] and tokens[1]
 
-    # Check if the label are a number, so, this number
-    # represents its value
-    if self.label in ['0', '1']:
-      self.value = int(self.label)
-    else:
-      # Look for it value on the global storage
-      self.value = values[t[0]]
-
-  def __bool__(self):
-    return self.value
-
-  def __str__(self):
-    return self.label
-
-  __repr__ = __str__
-  __nonzero__ = __bool__
-
-class LogicalOperation(object):
-  def __init__(self,t):
-    self.args = t[0][0::2]
-    self.apply(*self.args)
-
-  def __str__(self):
-    sep = " %s " % self.symbol
-    return "(" + sep.join(map(str,self.args)) + ")"
-
-  __repr__ = __str__
-
-class LogicalAnd(LogicalOperation):
-  # Setup the symbol
-  symbol = '&&'
-
-  def apply(self, a, b):
-    return bool(a.value) and (b.value)
-
-class LogicalOr(LogicalOperation):
-  # Setup the symbol
-  symbol = '||'
-
-  def apply(self, a, b):
-    return (bool(values[a]) or bool(values[b]))
-
-class LogicalImplication(LogicalOperation):
-  # Setup the symbol
-  symbol = '->'
-  evalop = any
-
-class LogicalNot(LogicalOperation):
-  # Setup the symbol
-  symbol = '!'
-
-  def __init__(self,t):
-    self.var = t[0][1]
-
-  def apply(self, a):
-    v = bool(values[self.var])
-    return not v
-
-  def __bool__(self):
-    v = bool(values[self.var])
-    return not v
-
-  def __str__(self):
-    return "~" + str(self.var)
-
-  __repr__ = __str__
-  __nonzero__ = __bool__
+def parseOr(tokens):
+  return tokens[0] or tokens[1]
 
 # Setup variables containing only one character
 _var = Word( alphas, max=1 )
+_var.setParseAction( parseVariable )
 
 # Allow values to be used as a binary representation
 _val = Word( '01', max=1 )
+_val.setParseAction( parseBinary )
+
+# Atom
+_atom = ZeroOrMore( _var | _val )
 
 # Operands
-_operands = _var | _val
-_operands.setParseAction(Operand)
+_and = Literal('&&')
+_or = Literal('||')
+_not = Literal('!')
+_binary_operands = _and | _or
 
-# Precedence
-booleanExpression = infixNotation( _operands, [
-  ( LogicalNot.symbol,          1, opAssoc.RIGHT, LogicalNot ),
-  ( LogicalAnd.symbol,          2, opAssoc.LEFT,  LogicalAnd ),
-  ( LogicalOr.symbol,           3, opAssoc.LEFT,  LogicalOr  ),
-  #( LogicalImplication.symbol,  4, opAssoc.LEFT,  LogicalImplication  ),
+# Expression
+_expression = infixNotation( _atom,
+[
+  ( _not, 1, opAssoc.RIGHT, parseNot),
+  ( _and, 2, opAssoc.LEFT,  parseAnd),
+  ( _or,  2, opAssoc.LEFT,  parseOr),
 ])
 
-print( bool(booleanExpression.parseString("1 && 0")) )
+
+print( _expression.parseString("1 && 1 || 0 && 0") )
