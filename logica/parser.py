@@ -70,4 +70,4 @@ _expression = infixNotation( _atom,
 ])
 
 
-print( _expression.parseString("1 && 1 || 0 && 0") )
+print( _expression.parseString("0 || 0") )
